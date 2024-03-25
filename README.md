@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 >
 > This adaptation is using AdGuardHome to get DNS latency in real-time.
-> You may want to visit the [DNSCrypt-CAKE](https://github.com/galpt/agh-cake?tab=readme-ov-file#about) repository if you want to compare both tools.
+> You may want to visit the [DNSCrypt-CAKE](https://github.com/galpt/dnscrypt-cake) repository if you want to compare both tools.
 
 > [!NOTE]
 >
