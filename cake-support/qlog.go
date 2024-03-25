@@ -64,6 +64,9 @@ const (
 	maxUL float64 = 4000000
 	maxDL float64 = 4000000
 	// ------
+	CertFilePath = "/etc/letsencrypt/live/net.0ms.dev/fullchain.pem"
+	KeyFilePath  = "/etc/letsencrypt/live/net.0ms.dev/privkey.pem"
+	// ------
 
 	// do not touch these.
 	// these are in nanoseconds.
@@ -130,9 +133,6 @@ var (
 	NumGCMem    string
 	timeElapsed string
 	latestLog   string
-
-	CertFilePath = "/etc/letsencrypt/live/net.0ms.dev/fullchain.pem"
-	KeyFilePath  = "/etc/letsencrypt/live/net.0ms.dev/privkey.pem"
 
 	tlsConf = &tls.Config{
 		InsecureSkipVerify: true,
