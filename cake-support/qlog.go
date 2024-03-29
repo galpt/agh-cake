@@ -159,14 +159,14 @@ func cakeAppendValues() {
 	bwDownArr = append(bwDownArr, bwDL)
 }
 
-func cakeMultiplyBandwidth() {
+func cakeRestoreBandwidth() {
 
-	// multiply the values by 16 if they're less than 90%.
+	// set to average bandwidth values if they're less than 90%.
 	if bwUL < bwUL90 {
-		bwUL *= 16
+		bwUL = bwUL90
 	}
 	if bwDL < bwDL90 {
-		bwDL *= 16
+		bwDL = bwDL90
 	}
 
 	// limit current bandwidth values to 90% of maximum bandwidth specified.
@@ -237,17 +237,9 @@ func cakeBufferbloatBandwidth() {
 			bwDL = 1 * Mbit
 			cakeQdiscReconfigure()
 
-			bwUL = 16 * Mbit
-			bwDL = 16 * Mbit
-			cakeQdiscReconfigure()
-
 		} else {
 			bwUL = 1 * Mbit
 			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-
-			bwUL = 16 * Mbit
-			bwDL = 16 * Mbit
 			cakeQdiscReconfigure()
 		}
 	} else {
@@ -257,13 +249,9 @@ func cakeBufferbloatBandwidth() {
 			cakeQdiscReconfigure()
 			bwUL = 1 * Mbit
 			cakeQdiscReconfigure()
-			bwUL = 16 * Mbit
-			cakeQdiscReconfigure()
 
 		} else {
 			bwUL = 1 * Mbit
-			cakeQdiscReconfigure()
-			bwUL = 16 * Mbit
 			cakeQdiscReconfigure()
 		}
 
@@ -272,12 +260,8 @@ func cakeBufferbloatBandwidth() {
 			cakeQdiscReconfigure()
 			bwDL = 1 * Mbit
 			cakeQdiscReconfigure()
-			bwDL = 16 * Mbit
-			cakeQdiscReconfigure()
 		} else {
 			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-			bwDL = 16 * Mbit
 			cakeQdiscReconfigure()
 		}
 	}
@@ -315,14 +299,9 @@ func cakeCalculateRTTandBandwidth() {
 		bwDownMedTotal = (bwDownArr[len(bwDownArr)-1] + 1) / 2
 	}
 
-	// use median values as optimal bandwidth if more than 20% of maxUL/maxDL.
-	if bwUpMedTotal > (float64(maxUL) * float64(0.2)) {
-		bwUL = bwUpMedTotal
-	}
+	bwUL = bwUpAvgTotal
+	bwDL = bwDownAvgTotal
 
-	if bwUpMedTotal > (float64(maxDL) * float64(0.2)) {
-		bwDL = bwDownMedTotal
-	}
 }
 
 func cakeHandleAvgRTT() {
@@ -377,7 +356,7 @@ func cake() {
 
 					cakeCheckArrays()
 					cakeAppendValues()
-					cakeMultiplyBandwidth()
+					cakeRestoreBandwidth()
 					cakeConvertRTTtoMicroseconds()
 					cakeNormalizeRTT()
 					cakeAutoSplitGSO()
@@ -393,7 +372,7 @@ func cake() {
 
 					cakeCheckArrays()
 					cakeAppendValues()
-					cakeMultiplyBandwidth()
+					cakeRestoreBandwidth()
 					cakeConvertRTTtoMicroseconds()
 					cakeNormalizeRTT()
 					cakeAutoSplitGSO()
@@ -413,12 +392,12 @@ func cake() {
 		cakeAutoSplitGSO()
 		cakeQdiscReconfigure()
 
-		// keep increasing current bandwidth if there's no bufferbloat.
+		// restore current bandwidth if there's no bufferbloat.
 		for bwUL < bwUL90 || bwDL < bwDL90 {
 
 			cakeCheckArrays()
 			cakeAppendValues()
-			cakeMultiplyBandwidth()
+			cakeRestoreBandwidth()
 			cakeConvertRTTtoMicroseconds()
 			cakeNormalizeRTT()
 			cakeAutoSplitGSO()
