@@ -2,8 +2,9 @@
 
 > [!IMPORTANT]
 >
-> This adaptation is using AdGuardHome to get DNS latency in real-time.
-> You may want to visit the [DNSCrypt-CAKE](https://github.com/galpt/dnscrypt-cake) repository if you want to compare both tools.
+> 1. This adaptation is using AdGuardHome to get DNS latency in real-time. You may want to visit the [DNSCrypt-CAKE](https://github.com/galpt/dnscrypt-cake) repository if you want to compare both tools.
+> 2. If there is a new update from the [AdGuardHome](https://github.com/AdguardTeam/AdGuardHome) repository, you only need to replace the `qlog.go` file from the new version using the one with CAKE support and it will work just fine.
+> 3. If there is a new update with an updated `qlog.go` from the official repository, we will try to update `qlog.go` (with CAKE support) accordingly.
 
 > [!NOTE]
 >
