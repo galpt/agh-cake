@@ -182,11 +182,15 @@ func cakeRestoreBandwidth() {
 }
 
 func cakeNormalizeRTT() {
-	// normalize RTT
+
 	if newRTTus < (datacentreRTT / time.Microsecond) {
 		newRTTus = (datacentreRTT / time.Microsecond)
 	} else if newRTTus > (interplanetaryRTT / time.Microsecond) {
 		newRTTus = (interplanetaryRTT / time.Microsecond)
+	}
+
+	if rttAvgDuration > newRTTus {
+		newRTTus = rttAvgDuration
 	}
 }
 
@@ -300,10 +304,6 @@ func cakeCalculateRTTandBandwidth() {
 		bwDownMedTotal = ((bwDownArr[len(bwDownArr)-1] / 2) + ((bwDownArr[len(bwDownArr)-1]/2)+1)/2)
 	} else {
 		bwDownMedTotal = (bwDownArr[len(bwDownArr)-1] + 1) / 2
-	}
-
-	if rttAvgDuration > newRTTus {
-		newRTTus = rttAvgDuration
 	}
 
 }
