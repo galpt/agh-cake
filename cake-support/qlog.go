@@ -106,7 +106,8 @@ var (
 	newRTTus time.Duration = 100000    // this will be in microseconds
 
 	// decide whether split-gso should be used or not.
-	autoSplitGSO = "split-gso"
+	autoSplitGSO     = "split-gso"
+	bufferbloatState = false
 
 	cakeJSON     Cake
 	cakeDataJSON []CakeData
@@ -189,9 +190,10 @@ func cakeNormalizeRTT() {
 		newRTTus = (interplanetaryRTT / time.Microsecond)
 	}
 
-	if rttAvgDuration > newRTTus {
+	if rttAvgDuration > (datacentreRTT/time.Microsecond) && rttAvgDuration < (interplanetaryRTT/time.Microsecond) && !bufferbloatState {
 		newRTTus = rttAvgDuration
 	}
+
 }
 
 func cakeConvertRTTtoMicroseconds() {
@@ -342,6 +344,7 @@ func cake() {
 
 		// handle bufferbloat state
 		if (float64(newRTT) / float64(time.Microsecond)) > float64(rttAvgDuration) {
+			bufferbloatState = true
 			cakeBufferbloatBandwidth()
 			cakeQdiscReconfigure()
 			cakeCheckArrays()
@@ -352,6 +355,7 @@ func cake() {
 			cakeNormalizeRTT()
 			cakeAutoSplitGSO()
 			cakeQdiscReconfigure()
+			bufferbloatState = false
 		}
 
 		cakeCheckArrays()
