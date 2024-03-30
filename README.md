@@ -27,7 +27,7 @@
 
 [CAKE (Common Applications Kept Enhanced)](https://www.bufferbloat.net/projects/codel/wiki/CakeTechnical/) is a comprehensive smart queue management that is available as a queue discipline (qdisc) for the Linux kernel. It is one of the best qdiscs designed to solve bufferbloat problems at the network edge.
 
-According to the CAKE's [ROUND TRIP TIME PARAMETERS](https://man7.org/linux/man-pages/man8/tc-cake.8.html) man7 page, if there is a way to adjust the RTT dynamically in real-time, it should theoretically make CAKE able to give the best possible AQM results between latency and throughput.
+According to the CAKE's [ROUND TRIP TIME PARAMETERS](https://man7.org/linux/man-pages/man8/tc-cake.8.html#ROUND_TRIP_TIME_PARAMETERS) man7 page, if there is a way to adjust the RTT dynamically in real-time, it should theoretically make CAKE able to give the best possible AQM results between latency and throughput.
 
 `agh-cake` is an attempt to adjust CAKE's `rtt` parameter in real-time based on real latency per DNS request using a slightly modified version of [AdGuardHome](https://github.com/AdguardTeam/AdGuardHome). In addition to that, it will also adjust `bandwidth` intelligently while constantly monitoring your real RTT.
 
@@ -43,7 +43,7 @@ This implementation is suitable for servers and networks where most of the users
 There are several things you can expect from using this implementation:
 1. You only need to worry about setting up `uplinkInterface`, `downlinkInterface`, `maxDL`, and `maxUL` correctly.
 2. It will manage `bandwidth` intelligently (do a speedtest using [Speedtest CLI](https://www.speedtest.net/apps/cli) or similar tools to see it in action).
-3. It will manage `rtt` ranging from 10ms - 1000ms.
+3. It will manage `rtt` ranging from 100us - 3600s. Unless your network is really that fast, you will see mostly 100ms RTT or higher and `agh-cake` will adjust CAKE's `rtt` accordingly.
 4. It will manage `split-gso` automatically.
 5. It is able to scale CAKE's `bandwidth` from 1 Mbit/s to 1 Gbit/s (or even more) in seconds.
 
@@ -79,8 +79,8 @@ Below are the CC algorithms that we have tested and worked well with `agh-cake` 
 ## How it works
 #### [:arrow_up: Go to Table of Contents](https://github.com/galpt/agh-cake?tab=readme-ov-file#table-of-contents)
 
-1. When a latency increase is detected, `agh-cake` will try to check if the DNS latency is in the range of 10ms - 1000ms or not.
-If yes, then use that as CAKE's `rtt`, if not then use `rtt 10ms` if it's less than 10ms, and `rtt 1000ms` if it's more than 1000ms.
+1. When a latency increase is detected, `agh-cake` will try to check if the DNS latency is in the range of 100us - 3600s or not.
+If yes, then use that as CAKE's `rtt`, if not then use `rtt 100us` if it's less than 100us, and `rtt 3600s` if it's more than 3600s.
 2. `agh-cake` will then adjust CAKE's `bandwidth` using all data in the `dataTotal` slice/array.
 3. The `cake()` function will try to handle `bandwidth`, `rtt`, and `split-gso` in milliseconds.
 

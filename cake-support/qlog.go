@@ -72,11 +72,14 @@ const (
 	// these are in nanoseconds.
 	// 1 ms = 1000000 ns.
 	// 1 ms = 1000 us.
-	metroRTT     time.Duration = 10000000
-	regionalRTT  time.Duration = 30000000
-	internetRTT  time.Duration = 100000000
-	oceanicRTT   time.Duration = 300000000
-	satelliteRTT time.Duration = 1000000000
+	datacentreRTT     time.Duration = 100000
+	lanRTT            time.Duration = 1000000
+	metroRTT          time.Duration = 10000000
+	regionalRTT       time.Duration = 30000000
+	internetRTT       time.Duration = 100000000
+	oceanicRTT        time.Duration = 300000000
+	satelliteRTT      time.Duration = 1000000000
+	interplanetaryRTT time.Duration = 1000000000 * 3600
 	// ------
 	Mbit float64 = 1000.00    // 1 Mbit
 	Gbit float64 = 1000000.00 // 1 Gbit
@@ -180,10 +183,10 @@ func cakeRestoreBandwidth() {
 
 func cakeNormalizeRTT() {
 	// normalize RTT
-	if newRTTus < (metroRTT / time.Microsecond) {
-		newRTTus = (metroRTT / time.Microsecond)
-	} else if newRTTus > (satelliteRTT / time.Microsecond) {
-		newRTTus = (satelliteRTT / time.Microsecond)
+	if newRTTus < (datacentreRTT / time.Microsecond) {
+		newRTTus = (datacentreRTT / time.Microsecond)
+	} else if newRTTus > (interplanetaryRTT / time.Microsecond) {
+		newRTTus = (interplanetaryRTT / time.Microsecond)
 	}
 }
 
@@ -299,15 +302,8 @@ func cakeCalculateRTTandBandwidth() {
 		bwDownMedTotal = (bwDownArr[len(bwDownArr)-1] + 1) / 2
 	}
 
-	bwUL = bwUpAvgTotal
-	bwDL = bwDownAvgTotal
+	newRTTus = rttAvgDuration
 
-}
-
-func cakeHandleAvgRTT() {
-	if rttAvgDuration > newRTTus {
-		newRTTus = rttAvgDuration
-	}
 }
 
 func cakeHandleJSON() {
@@ -344,68 +340,25 @@ func cake() {
 
 		// handle bufferbloat state
 		if (float64(newRTT) / float64(time.Microsecond)) > float64(rttAvgDuration) {
-
 			cakeBufferbloatBandwidth()
 			cakeQdiscReconfigure()
-
-			// then restore the bandwidth over time.
-			// if the bandwidth ratio is 1:1,
-			// then increase both values at the same time.
-			if maxUL == maxDL {
-				for bwUL < bwUL90 {
-
-					cakeCheckArrays()
-					cakeAppendValues()
-					cakeRestoreBandwidth()
-					cakeConvertRTTtoMicroseconds()
-					cakeNormalizeRTT()
-					cakeAutoSplitGSO()
-					cakeQdiscReconfigure()
-
-				}
-
-			} else {
-
-				// if the bandwidth ratio isn't 1:1,
-				// then handle them separately.
-				for bwUL < bwUL90 || bwDL < bwDL90 {
-
-					cakeCheckArrays()
-					cakeAppendValues()
-					cakeRestoreBandwidth()
-					cakeConvertRTTtoMicroseconds()
-					cakeNormalizeRTT()
-					cakeAutoSplitGSO()
-					cakeQdiscReconfigure()
-
-				}
-
-			}
-
-		}
-
-		cakeCheckArrays()
-		cakeAppendValues()
-		cakeCalculateRTTandBandwidth()
-		cakeConvertRTTtoMicroseconds()
-		cakeNormalizeRTT()
-		cakeAutoSplitGSO()
-		cakeQdiscReconfigure()
-
-		// restore current bandwidth if there's no bufferbloat.
-		for bwUL < bwUL90 || bwDL < bwDL90 {
-
 			cakeCheckArrays()
 			cakeAppendValues()
 			cakeRestoreBandwidth()
+			cakeCalculateRTTandBandwidth()
 			cakeConvertRTTtoMicroseconds()
 			cakeNormalizeRTT()
 			cakeAutoSplitGSO()
 			cakeQdiscReconfigure()
-
 		}
 
-		cakeHandleAvgRTT()
+		cakeCheckArrays()
+		cakeAppendValues()
+		cakeRestoreBandwidth()
+		cakeCalculateRTTandBandwidth()
+		cakeConvertRTTtoMicroseconds()
+		cakeNormalizeRTT()
+		cakeAutoSplitGSO()
 		cakeQdiscReconfigure()
 		cakeHandleJSON()
 
