@@ -302,7 +302,9 @@ func cakeCalculateRTTandBandwidth() {
 		bwDownMedTotal = (bwDownArr[len(bwDownArr)-1] + 1) / 2
 	}
 
-	newRTTus = rttAvgDuration
+	if rttAvgDuration > newRTTus {
+		newRTTus = rttAvgDuration
+	}
 
 }
 
