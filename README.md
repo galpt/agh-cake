@@ -86,7 +86,7 @@ If yes, then use that as CAKE's `rtt`, if not then use `rtt 100us` if it's less 
 
 > [!NOTE]
 >
-> The `cake()` function will configure CAKE and re-calculate `rtt` and `bandwidth`, then save the latest data into several slices/arrays. The arrays can hold up to 100000 data, and the `cake()` function will loop infinitely with a sleep of 100 microseconds for each loop. All data will be used to calculate the final values for configuring CAKE's `rtt` and `bandwidth`.
+> The `cake()` function will configure CAKE and re-calculate `rtt` and `bandwidth`, then save the latest data into several slices/arrays. The arrays can hold up to 10000 data, and the `cake()` function will loop infinitely with a sleep of 100 microseconds for each loop. All data will be used to calculate the final values for configuring CAKE's `rtt` and `bandwidth`.
 >
 > This is an attempt to intelligently configure CAKE's `rtt` and `bandwidth` based on all the data, so it doesn't need to aggressively probe DNS servers like what the original [cake-autorate](https://github.com/lynxthecat/cake-autorate) implementation does.
 

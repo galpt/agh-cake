@@ -88,7 +88,7 @@ const (
 	Kilobyte      = 1 << 10
 	timeoutTr     = 30 * time.Second
 	hostPortGin   = "0.0.0.0:22222"
-	cakeDataLimit = 100000 // 100K
+	cakeDataLimit = 10000
 	usrAgent      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 )
 
@@ -102,12 +102,12 @@ var (
 
 	// default to 100ms rtt.
 	// in Go, "time.Duration" defaults to nanoseconds.
+	oldRTT   time.Duration = 100000000
 	newRTT   time.Duration = 100000000 // this is in nanoseconds
 	newRTTus time.Duration = 100000    // this will be in microseconds
 
 	// decide whether split-gso should be used or not.
-	autoSplitGSO     = "split-gso"
-	bufferbloatState = false
+	autoSplitGSO = "split-gso"
 
 	cakeJSON     Cake
 	cakeDataJSON []CakeData
@@ -184,14 +184,12 @@ func cakeRestoreBandwidth() {
 
 func cakeNormalizeRTT() {
 
-	if newRTTus < (datacentreRTT / time.Microsecond) {
-		newRTTus = (datacentreRTT / time.Microsecond)
-	} else if newRTTus > (interplanetaryRTT / time.Microsecond) {
-		newRTTus = (interplanetaryRTT / time.Microsecond)
-	}
-
-	if rttAvgDuration > (datacentreRTT/time.Microsecond) && rttAvgDuration < (interplanetaryRTT/time.Microsecond) && !bufferbloatState {
-		newRTTus = rttAvgDuration
+	if newRTTus > (datacentreRTT/time.Microsecond) && newRTTus < (interplanetaryRTT/time.Microsecond) {
+		if newRTTus < (datacentreRTT / time.Microsecond) {
+			newRTTus = (datacentreRTT / time.Microsecond)
+		} else if newRTTus > (interplanetaryRTT / time.Microsecond) {
+			newRTTus = (interplanetaryRTT / time.Microsecond)
+		}
 	}
 
 }
@@ -343,8 +341,7 @@ func cake() {
 		cakeExecTime = time.Now()
 
 		// handle bufferbloat state
-		if (float64(newRTT) / float64(time.Microsecond)) > float64(rttAvgDuration) {
-			bufferbloatState = true
+		if (float64(newRTT) / float64(time.Microsecond)) > float64(float64(oldRTT)/float64(time.Microsecond)) {
 			cakeBufferbloatBandwidth()
 			cakeQdiscReconfigure()
 			cakeCheckArrays()
@@ -355,7 +352,6 @@ func cake() {
 			cakeNormalizeRTT()
 			cakeAutoSplitGSO()
 			cakeQdiscReconfigure()
-			bufferbloatState = false
 		}
 
 		cakeCheckArrays()
@@ -367,6 +363,9 @@ func cake() {
 		cakeAutoSplitGSO()
 		cakeQdiscReconfigure()
 		cakeHandleJSON()
+
+		// update oldRTT
+		oldRTT = newRTT
 
 	}
 }
