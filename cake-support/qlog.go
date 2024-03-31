@@ -167,10 +167,20 @@ func cakeRestoreBandwidth() {
 
 	// set to average bandwidth values if they're less than 90%.
 	if bwUL < bwUL90 {
-		bwUL = bwUL90
+		if (bwUL < bwUpAvgTotal) && (bwUpAvgTotal > (float64(maxUL) * float64(0.5))) {
+			bwUL = bwUpAvgTotal
+		} else {
+			bwUL = float64(maxUL) * float64(0.5)
+		}
+		bwUL = bwUL + (float64(bwUL) * float64(0.5))
 	}
 	if bwDL < bwDL90 {
-		bwDL = bwDL90
+		if (bwDL < bwDownAvgTotal) && (bwDownAvgTotal > (float64(maxDL) * float64(0.5))) {
+			bwDL = bwDownAvgTotal
+		} else {
+			bwDL = float64(maxDL) * float64(0.5)
+		}
+		bwDL = bwDL + (float64(bwDL) * float64(0.5))
 	}
 
 	// limit current bandwidth values to 90% of maximum bandwidth specified.
@@ -233,8 +243,6 @@ func cakeQdiscReconfigure() {
 func cakeBufferbloatBandwidth() {
 	// when a bufferbloat is detected, we should slow things down.
 	if maxUL == maxDL {
-		// downscale bandwidth to 1 Mbit/s,
-		// but avoid bandwidth too low.
 		if (float64(bwUL) * float64(0.2)) < (1 * Mbit) {
 			bwUL = float64(bwUL) * float64(0.2)
 			bwDL = float64(bwDL) * float64(0.2)
@@ -352,16 +360,18 @@ func cake() {
 			cakeNormalizeRTT()
 			cakeAutoSplitGSO()
 			cakeQdiscReconfigure()
+		} else {
+			cakeCheckArrays()
+			cakeAppendValues()
+			cakeRestoreBandwidth()
+			cakeCalculateRTTandBandwidth()
+			cakeConvertRTTtoMicroseconds()
+			cakeNormalizeRTT()
+			cakeAutoSplitGSO()
+			cakeQdiscReconfigure()
 		}
 
-		cakeCheckArrays()
-		cakeAppendValues()
-		cakeRestoreBandwidth()
-		cakeCalculateRTTandBandwidth()
-		cakeConvertRTTtoMicroseconds()
-		cakeNormalizeRTT()
-		cakeAutoSplitGSO()
-		cakeQdiscReconfigure()
+		// update metrics
 		cakeHandleJSON()
 
 		// update oldRTT
@@ -609,7 +619,7 @@ func newLogEntry(params *AddParams) (entry *logEntry) {
 
 	// save DNS latency as the new RTT for cake.
 	// only save latency for uncached DNS requests.
-	if !params.Cached {
+	if !params.Cached && params.Elapsed > lanRTT {
 		newRTT = params.Elapsed
 	}
 
