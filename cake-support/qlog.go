@@ -167,17 +167,13 @@ func cakeRestoreBandwidth() {
 
 	// set to average bandwidth values if they're less than 90%.
 	if bwUL < bwUL90 {
-		if (bwUL < bwUpAvgTotal) && (bwUpAvgTotal > (float64(maxUL) * float64(0.5))) {
-			bwUL = bwUpAvgTotal
-		} else {
+		if bwUL < float64(maxUL)*float64(0.5) {
 			bwUL = float64(maxUL) * float64(0.5)
 		}
 		bwUL = bwUL + (float64(bwUL) * float64(0.5))
 	}
 	if bwDL < bwDL90 {
-		if (bwDL < bwDownAvgTotal) && (bwDownAvgTotal > (float64(maxDL) * float64(0.5))) {
-			bwDL = bwDownAvgTotal
-		} else {
+		if bwDL < float64(maxDL)*float64(0.5) {
 			bwDL = float64(maxDL) * float64(0.5)
 		}
 		bwDL = bwDL + (float64(bwDL) * float64(0.5))
