@@ -106,6 +106,11 @@ var (
 	newRTT   time.Duration = 100000000 // this is in nanoseconds
 	newRTTus time.Duration = 100000    // this will be in microseconds
 
+	// Other interfaces that will be configured by the cake() function too.
+	// If you don't have any, empty this slice by using this:
+	// miscInterfaceArr  []string
+	miscInterfaceArr = []string{"wg0", "nat64"}
+
 	// decide whether split-gso should be used or not.
 	autoSplitGSO = "split-gso"
 
@@ -226,6 +231,7 @@ func cakeQdiscReconfigure() {
 		fmt.Println(err.Error() + ": " + string(output))
 		return
 	}
+
 	// set downlink
 	cakeDownlink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", downlinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", newRTTus), "bandwidth", fmt.Sprintf("%fkbit", bwDL), fmt.Sprintf("%v", autoSplitGSO))
 	output, err = cakeDownlink.Output()
@@ -234,6 +240,28 @@ func cakeQdiscReconfigure() {
 		fmt.Println(err.Error() + ": " + string(output))
 		return
 	}
+
+	// configure other interfaces that are using cake (i.e. wg0).
+	// for now support is only for uplink interface.
+	if len(miscInterfaceArr) >= 1 {
+
+		for interfaceIdx := range miscInterfaceArr {
+			if len(miscInterfaceArr[interfaceIdx]) > 1 {
+
+				// set uplink
+				cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", miscInterfaceArr[interfaceIdx]), "root", "cake", "rtt", fmt.Sprintf("%dus", newRTTus), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO))
+				output, err := cakeUplink.Output()
+
+				if err != nil {
+					fmt.Println(err.Error() + ": " + string(output))
+					return
+				}
+
+			}
+
+		}
+	}
+
 }
 
 func cakeBufferbloatBandwidth() {
