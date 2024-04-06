@@ -376,8 +376,6 @@ func cake() {
 		if (float64(newRTT) / float64(time.Microsecond)) > float64(float64(oldRTT)/float64(time.Microsecond)) {
 			cakeBufferbloatBandwidth()
 			cakeQdiscReconfigure()
-			cakeCheckArrays()
-			cakeAppendValues()
 			cakeRestoreBandwidth()
 			cakeCalculateRTTandBandwidth()
 			cakeConvertRTTtoMicroseconds()
@@ -385,8 +383,6 @@ func cake() {
 			cakeAutoSplitGSO()
 			cakeQdiscReconfigure()
 		} else {
-			cakeCheckArrays()
-			cakeAppendValues()
 			cakeRestoreBandwidth()
 			cakeCalculateRTTandBandwidth()
 			cakeConvertRTTtoMicroseconds()
@@ -643,8 +639,10 @@ func newLogEntry(params *AddParams) (entry *logEntry) {
 
 	// save DNS latency as the new RTT for cake.
 	// only save latency for uncached DNS requests.
-	if !params.Cached && params.Elapsed > lanRTT {
+	if !params.Cached && params.Elapsed >= internetRTT {
 		newRTT = params.Elapsed
+		cakeCheckArrays()
+		cakeAppendValues()
 	}
 
 	if !cakeFuncEnabled {
