@@ -5,6 +5,7 @@
 > 1. This adaptation is using AdGuardHome to get DNS latency in real-time. You may want to visit the [DNSCrypt-CAKE](https://github.com/galpt/dnscrypt-cake) repository if you want to compare both tools.
 > 2. If there is a new update from the [AdGuardHome](https://github.com/AdguardTeam/AdGuardHome) repository, you only need to replace the `qlog.go` file from the new version using the one with CAKE support and it will work just fine.
 > 3. If there is a new update with an updated `qlog.go` from the official repository, we will try to update `qlog.go` (with CAKE support) accordingly.
+> 4. This adaptation was inspired by the [cake-autorate](https://github.com/lynxthecat/cake-autorate) project, but was not intended to replace that at all, since it is using a completely different approach. You are free to use whatever works best for you.
 
 > [!NOTE]
 >
@@ -86,7 +87,7 @@ If yes, then use that as CAKE's `rtt`, if not then use `rtt 100us` if it's less 
 
 > [!NOTE]
 >
-> The `cake()` function will configure CAKE and re-calculate `rtt` and `bandwidth`, then save the latest data into several slices/arrays. The arrays can hold up to 10000 data, and the `cake()` function will loop infinitely with a sleep of 100 microseconds for each loop. All data will be used to calculate the final values for configuring CAKE's `rtt` and `bandwidth`.
+> The `cake()` function will configure CAKE and re-calculate `rtt` and `bandwidth`, then save the latest data into several slices/arrays. The arrays can hold up to 100000 data, and the `cake()` function will loop infinitely with a sleep of 100 microseconds for each loop. All data will be used to calculate the final values for configuring CAKE's `rtt` and `bandwidth`.
 >
 > This is an attempt to intelligently configure CAKE's `rtt` and `bandwidth` based on all the data, so it doesn't need to aggressively probe DNS servers like what the original [cake-autorate](https://github.com/lynxthecat/cake-autorate) implementation does.
 
@@ -130,14 +131,6 @@ A quick speed/bufferbloat test using [Cloudflare Speed Test](https://speed.cloud
 A quick speed/bufferbloat test using [Waveform Speed Test](https://www.waveform.com/tools/bufferbloat):
 
 [Waveform Speed Test](https://cdn1.0ms.dev/1/wvform.mp4)
-
-> [!NOTE]
->
-> Other details related to the tests:
->
-> 1. The above tests were done via a VPN tunnel (WireGuard).
-> 2. The above tests were using wireless connection.
-> 3. Server location is in Singapore, and most users are located in Jakarta (Indonesia).
 
 * * *
 
