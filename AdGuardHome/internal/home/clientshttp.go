@@ -101,17 +101,19 @@ func (clients *clientsContainer) handleGetClients(w http.ResponseWriter, r *http
 		data.Clients = append(data.Clients, cj)
 	}
 
-	for ip, rc := range clients.ipToRC {
+	clients.runtimeIndex.Range(func(rc *client.Runtime) (cont bool) {
 		src, host := rc.Info()
 		cj := runtimeClientJSON{
 			WHOIS:  whoisOrEmpty(rc),
 			Name:   host,
 			Source: src,
-			IP:     ip,
+			IP:     rc.Addr(),
 		}
 
 		data.RuntimeClients = append(data.RuntimeClients, cj)
-	}
+
+		return true
+	})
 
 	for _, l := range clients.dhcp.Leases() {
 		cj := runtimeClientJSON{
@@ -434,7 +436,7 @@ func (clients *clientsContainer) handleUpdateClient(w http.ResponseWriter, r *ht
 func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	data := []map[string]*clientJSON{}
-	for i := 0; i < len(q); i++ {
+	for i := range len(q) {
 		idStr := q.Get(fmt.Sprintf("ip%d", i))
 		if idStr == "" {
 			break
@@ -463,8 +465,8 @@ func (clients *clientsContainer) handleFindClient(w http.ResponseWriter, r *http
 // /etc/hosts tables, DHCP leases, or blocklists.  cj is guaranteed to be
 // non-nil.
 func (clients *clientsContainer) findRuntime(ip netip.Addr, idStr string) (cj *clientJSON) {
-	rc, ok := clients.findRuntimeClient(ip)
-	if !ok {
+	rc := clients.findRuntimeClient(ip)
+	if rc == nil {
 		// It is still possible that the IP used to be in the runtime clients
 		// list, but then the server was reloaded.  So, check the DNS server's
 		// blocked IP list.

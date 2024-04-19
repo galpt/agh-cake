@@ -5,8 +5,8 @@ import (
 	"io"
 	"io/fs"
 
+	"github.com/AdguardTeam/golibs/container"
 	"github.com/AdguardTeam/golibs/errors"
-	"github.com/AdguardTeam/golibs/stringutil"
 )
 
 // FileWalker is the signature of a function called for files in the file tree.
@@ -56,7 +56,7 @@ func checkFile(
 // srcSet.  srcSet must be non-nil.
 func handlePatterns(
 	fsys fs.FS,
-	srcSet *stringutil.Set,
+	srcSet *container.MapSet[string],
 	patterns ...string,
 ) (sub []string, err error) {
 	sub = make([]string, 0, len(patterns))
@@ -87,7 +87,7 @@ func handlePatterns(
 func (fw FileWalker) Walk(fsys fs.FS, initial ...string) (ok bool, err error) {
 	// The slice of sources keeps the order in which the files are walked since
 	// srcSet.Values() returns strings in undefined order.
-	srcSet := stringutil.NewSet()
+	srcSet := container.NewMapSet[string]()
 	var src []string
 	src, err = handlePatterns(fsys, srcSet, initial...)
 	if err != nil {
@@ -97,6 +97,8 @@ func (fw FileWalker) Walk(fsys fs.FS, initial ...string) (ok bool, err error) {
 	var filename string
 	defer func() { err = errors.Annotate(err, "checking %q: %w", filename) }()
 
+	// TODO(e.burkov):  Redo this loop, as it modifies the very same slice it
+	// iterates over.
 	for i := 0; i < len(src); i++ {
 		var patterns []string
 		var cont bool
