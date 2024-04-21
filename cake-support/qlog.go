@@ -54,9 +54,8 @@ const (
 	// ------
 	// you should adjust these values
 	// ------
-	// adjust them according to your network interface names
-	uplinkInterface   = "enp3s0"
-	downlinkInterface = "ifb4enp3s0"
+	// adjust this according to your network interface name
+	uplinkInterface = "enp3s0"
 	// ------
 	// adjust "maxUL" and "maxDL" based on the maximum speed
 	// advertised by your ISP (in Kilobit/s format).
@@ -109,7 +108,8 @@ var (
 	// Other interfaces that will be configured by the cake() function too.
 	// If you don't have any, empty this slice by using this:
 	// miscInterfaceArr  []string
-	miscInterfaceArr = []string{"wg0", "ip6-tun", "bebas64nat"}
+	downlinkInterface = fmt.Sprintf("ifb4%v", uplinkInterface) // this is automatically configured
+	miscInterfaceArr  = []string{"wg0", "ip6-tun", "bebas64nat", "beb-tun"}
 
 	// decide whether split-gso should be used or not.
 	autoSplitGSO = "split-gso"
@@ -171,18 +171,12 @@ func cakeAppendValues() {
 
 func cakeRestoreBandwidth() {
 
-	// set to average bandwidth values if they're less than 90%.
+	// keep increasing if they're less than 90%.
 	if bwUL < bwUL90 {
-		if bwUL < float64(maxUL)*float64(0.05) {
-			bwUL = float64(maxUL) * float64(0.05)
-		}
-		bwUL = bwUL + (float64(bwUL) * float64(0.05))
+		bwUL = bwUL + float64(1000.0)
 	}
 	if bwDL < bwDL90 {
-		if bwDL < float64(maxDL)*float64(0.05) {
-			bwDL = float64(maxDL) * float64(0.05)
-		}
-		bwDL = bwDL + (float64(bwDL) * float64(0.05))
+		bwDL = bwDL + float64(1000.0)
 	}
 
 	// limit current bandwidth values to 90% of maximum bandwidth specified.
@@ -192,6 +186,8 @@ func cakeRestoreBandwidth() {
 	if bwDL >= bwDL90 {
 		bwDL = bwDL90
 	}
+
+	cakeQdiscReconfigure()
 }
 
 func cakeNormalizeRTT() {
@@ -226,7 +222,7 @@ func cakeQdiscReconfigure() {
 
 	// use 98% of RTT to reduce the size of burst.
 	// set uplink
-	cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", uplinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO))
+	cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", uplinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO), "diffserv4", "nat", "nowash", "conservative", "dual-srchost", "memlimit", "32mb")
 	output, err := cakeUplink.Output()
 
 	if err != nil {
@@ -235,7 +231,7 @@ func cakeQdiscReconfigure() {
 	}
 
 	// set downlink
-	cakeDownlink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", downlinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwDL), fmt.Sprintf("%v", autoSplitGSO))
+	cakeDownlink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", downlinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwDL), fmt.Sprintf("%v", autoSplitGSO), "besteffort", "nat", "wash", "conservative", "dual-dsthost", "ingress", "memlimit", "32mb")
 	output, err = cakeDownlink.Output()
 
 	if err != nil {
@@ -251,7 +247,7 @@ func cakeQdiscReconfigure() {
 			if len(miscInterfaceArr[interfaceIdx]) > 1 {
 
 				// set uplink
-				cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", miscInterfaceArr[interfaceIdx]), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO), "diffserv4", "nat", "nowash", "conservative", "triple-isolate", "memlimit", "32mb")
+				cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", miscInterfaceArr[interfaceIdx]), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO), "besteffort", "nat", "nowash", "conservative", "triple-isolate", "memlimit", "32mb")
 				output, err := cakeUplink.Output()
 
 				if err != nil {
@@ -268,43 +264,13 @@ func cakeQdiscReconfigure() {
 
 func cakeBufferbloatBandwidth() {
 	// when a bufferbloat is detected, we should slow things down.
-	if maxUL == maxDL {
-		if (float64(bwUL) * float64(0.2)) < (1 * Mbit) {
-			bwUL = float64(bwUL) * float64(0.2)
-			bwDL = float64(bwDL) * float64(0.2)
-			cakeQdiscReconfigure()
-
-			bwUL = 1 * Mbit
-			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-
-		} else {
-			bwUL = 1 * Mbit
-			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-		}
-	} else {
-
-		if (float64(bwUL) * float64(0.2)) < (100 * Mbit) {
-			bwUL = float64(bwUL) * float64(0.2)
-			cakeQdiscReconfigure()
-			bwUL = 1 * Mbit
-			cakeQdiscReconfigure()
-
-		} else {
-			bwUL = 1 * Mbit
-			cakeQdiscReconfigure()
-		}
-
-		if (float64(bwDL) * float64(0.2)) < (100 * Mbit) {
-			bwDL = float64(bwDL) * float64(0.2)
-			cakeQdiscReconfigure()
-			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-		} else {
-			bwDL = 1 * Mbit
-			cakeQdiscReconfigure()
-		}
+	if float64(bwUL)/float64(2.0) > float64(0.0) {
+		bwUL = float64(bwUL) / float64(2.0)
+		cakeQdiscReconfigure()
+	}
+	if float64(bwDL)/float64(2.0) > float64(0.0) {
+		bwDL = float64(bwDL) / float64(2.0)
+		cakeQdiscReconfigure()
 	}
 }
 
@@ -354,6 +320,61 @@ func cakeHandleJSON() {
 	cakeJSON = Cake{RTTAverage: rttAvgDuration, RTTAverageString: fmt.Sprintf("%.2f ms | %.2f μs", (float64(rttAvgDuration) / float64(1000.00)), float64(rttAvgDuration)), BwUpAverage: bwUpAvgTotal, BwUpAverageString: fmt.Sprintf("%.2f kbit | %.2f Mbit", bwUpAvgTotal, (bwUpAvgTotal / Mbit)), BwDownAverage: bwDownAvgTotal, BwDownAverageString: fmt.Sprintf("%.2f kbit | %.2f Mbit", bwDownAvgTotal, (bwDownAvgTotal / Mbit)), BwUpMedian: bwUpMedTotal, BwUpMedianString: fmt.Sprintf("%.2f kbit | %.2f Mbit", bwUpMedTotal, (bwUpMedTotal / Mbit)), BwDownMedian: bwDownMedTotal, BwDownMedianString: fmt.Sprintf("%.2f kbit | %.2f Mbit", bwDownMedTotal, (bwDownMedTotal / Mbit)), DataTotal: fmt.Sprintf("%v of %v", len(cakeDataJSON), cakeDataLimit), ExecTimeCAKE: fmt.Sprintf("%.2f ms | %.2f μs", (float64(cakeExecTimeArr[len(cakeExecTimeArr)-1]) / float64(time.Millisecond)), (float64(cakeExecTimeArr[len(cakeExecTimeArr)-1]) / float64(time.Microsecond))), ExecTimeAverageCAKE: fmt.Sprintf("%.2f ms | %.2f μs", (float64(cakeExecTimeAvgDuration) / float64(time.Millisecond)), (float64(cakeExecTimeAvgDuration) / float64(time.Microsecond)))}
 }
 
+// at first launch, make sure up/downlink interfaces are there.
+func initUplink() {
+	cakeUplink := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", uplinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwUL), fmt.Sprintf("%v", autoSplitGSO), "diffserv8", "nat", "nowash", "conservative", "dual-srchost", "memlimit", "32mb")
+	output, err := cakeUplink.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
+func initDownlink1() {
+	cakeDownlinkAdd1 := exec.Command("ip", "link", "add", "name", fmt.Sprintf("%v", downlinkInterface), "type", "ifb")
+	output, err := cakeDownlinkAdd1.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
+func initDownlink2() {
+	cakeDownlinkAdd2 := exec.Command("tc", "qdisc", "add", "dev", fmt.Sprintf("%v", uplinkInterface), "handle", "ffff:", "ingress")
+	output, err := cakeDownlinkAdd2.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
+func initDownlink3() {
+	cakeDownlinkAdd3 := exec.Command("tc", "qdisc", "replace", "dev", fmt.Sprintf("%v", downlinkInterface), "root", "cake", "rtt", fmt.Sprintf("%dus", ((newRTTus*98)/100)), "bandwidth", fmt.Sprintf("%fkbit", bwDL), fmt.Sprintf("%v", autoSplitGSO), "besteffort", "nat", "wash", "conservative", "dual-dsthost", "ingress", "memlimit", "32mb")
+	output, err := cakeDownlinkAdd3.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
+func initDownlink4() {
+	cakeDownlinkAdd4 := exec.Command("ip", "link", "set", fmt.Sprintf("%v", downlinkInterface), "up")
+	output, err := cakeDownlinkAdd4.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
+func initDownlink5() {
+	cakeDownlinkAdd5 := exec.Command("tc", "filter", "add", "dev", fmt.Sprintf("%v", uplinkInterface), "parent", "ffff:", "matchall", "action", "mirred", "egress", "redirect", "dev", fmt.Sprintf("%v", downlinkInterface))
+	output, err := cakeDownlinkAdd5.Output()
+	if err != nil {
+		fmt.Println(err.Error() + ": " + string(output))
+		return
+	}
+}
+
 func cake() {
 
 	// calculate 90% bandwidth percentage
@@ -364,39 +385,29 @@ func cake() {
 	bwUL = maxUL
 	bwDL = maxDL
 
+	// initialize up/downlink interfaces.
+	go initUplink()
+	go initDownlink1()
+	go initDownlink2()
+	go initDownlink3()
+	go initDownlink4()
+	go initDownlink5()
+
 	// infinite loop to change cake parameters in real-time
 	for {
 
 		// counting exec time starts from here
 		cakeExecTime = time.Now()
 
-		// handle bufferbloat state
-		if (float64(newRTT) / float64(time.Microsecond)) > float64(float64(oldRTT)/float64(time.Microsecond)) {
-			cakeBufferbloatBandwidth()
-			cakeQdiscReconfigure()
-			cakeCheckArrays()
-			cakeAppendValues()
-			cakeRestoreBandwidth()
-			cakeCalculateRTTandBandwidth()
-			cakeConvertRTTtoMicroseconds()
-			cakeNormalizeRTT()
-			cakeAutoSplitGSO()
-			cakeQdiscReconfigure()
-			cakeHandleJSON()
-		} else {
-			cakeCheckArrays()
-			cakeAppendValues()
-			cakeRestoreBandwidth()
-			cakeCalculateRTTandBandwidth()
-			cakeConvertRTTtoMicroseconds()
-			cakeNormalizeRTT()
-			cakeAutoSplitGSO()
-			cakeQdiscReconfigure()
-			cakeHandleJSON()
-		}
-
-		// update oldRTT
-		oldRTT = newRTT
+		cakeCheckArrays()
+		cakeAppendValues()
+		cakeRestoreBandwidth()
+		cakeCalculateRTTandBandwidth()
+		cakeConvertRTTtoMicroseconds()
+		cakeNormalizeRTT()
+		cakeAutoSplitGSO()
+		cakeQdiscReconfigure()
+		cakeHandleJSON()
 
 	}
 }
@@ -455,6 +466,17 @@ func cakeServer() {
 
 	cakeFuncEnabled = false
 
+}
+
+func handleGPTUDP() {
+	for {
+		runGPTUDP := exec.Command("/home/ubuntu/0ms/gptudp", "")
+		output, err := runGPTUDP.Output()
+		if err != nil {
+			fmt.Println(err.Error() + ": " + string(output))
+			return
+		}
+	}
 }
 
 // ==========
@@ -635,14 +657,21 @@ func newLogEntry(params *AddParams) (entry *logEntry) {
 
 	// save DNS latency as the new RTT for cake.
 	// only save latency for uncached DNS requests.
-	if !params.Cached && params.Elapsed >= regionalRTT {
-		newRTT = params.Elapsed
+	if !params.Cached && params.Elapsed >= metroRTT {
+		// handle bufferbloat state
+		if params.Elapsed > oldRTT {
+			newRTT = params.Elapsed
+			cakeBufferbloatBandwidth()
+			oldRTT = newRTT
+		}
+
 	}
 
 	if !cakeFuncEnabled {
 		cakeFuncEnabled = true
 		go cake()
 		go cakeServer()
+		go handleGPTUDP()
 	}
 
 	return entry
