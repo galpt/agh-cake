@@ -658,13 +658,12 @@ func newLogEntry(params *AddParams) (entry *logEntry) {
 	// save DNS latency as the new RTT for cake.
 	// only save latency for uncached DNS requests.
 	if !params.Cached && params.Elapsed >= metroRTT {
+		newRTT = params.Elapsed
 		// handle bufferbloat state
 		if params.Elapsed > oldRTT {
-			newRTT = params.Elapsed
 			cakeBufferbloatBandwidth()
-			oldRTT = newRTT
 		}
-
+		oldRTT = newRTT
 	}
 
 	if !cakeFuncEnabled {
